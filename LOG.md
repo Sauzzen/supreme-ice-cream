@@ -12,3 +12,5 @@ status TEXT CHECK (status IN "Active", "Inactive", "Suspended") NOT NULL,
 
 P.S. Edit the htmls and the app/auth.py
 ```
+
+try
