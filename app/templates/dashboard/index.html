@@ -1,5 +1,5 @@
-{% extends 'base.html' %}
+{% extends 'dashboard/dashboard.html' %}
 
 {% block title %}Home{% endblock %}
 
-{% block body %}<a href="{{ url_for('auth.logout') }}">Log Out</a>{% endblock %}
+{% block main %}<a href="{{ url_for('auth.logout') }}">Log Out</a>{% endblock %}
