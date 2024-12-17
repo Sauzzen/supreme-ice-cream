@@ -1,0 +1,35 @@
+{% extends 'dashboard/dashboard.html' %}
+
+{% block title %}Home{% endblock %}
+
+{% block main %}
+<main>
+    <form action="{{ url_for('dashboard.update_profile', id=g.user['id']) }}" ,
+        method="post">
+        <select name="account_id">
+            {% for account in accounts %}
+            <option value="{{ account['id'] }}">{{ account['account_name']
+                }}</option>
+            {% endfor %}
+        </select>
+        <input name="username" type="text"
+            value="{{ user['username'] or request.form['username'] }}">
+        <input name="first_name" type="text"
+            value="{{ user['first_name'] or request.form['first_name'] }}">
+        <input name="middle_name" type="text"
+            value="{{ user['middle_name'] or request.form['middle_name'] }}">
+        <div class="cb">
+            <input id="cb" name="no_middle_name" type="checkbox">
+            <label for="cb">No Legal Middle Name</label>
+            <input name="last_name" type="text"
+                value="{{ user['last_name'] or request.form['last_name'] }}">
+            <input name="email" type="email"
+                value="{{ user['email'] or request.form['email'] }}">
+            <input name="password" type="password" placeholder="Password">
+            <input name="confirm_password" type="password"
+                placeholder="Confirm Password">
+            <button type="submit">Update Profile</button>
+        </div>
+    </form>
+</main>
+{% endblock %}

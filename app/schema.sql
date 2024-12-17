@@ -12,6 +12,8 @@ DROP TABLE IF EXISTS budgets;
 
 DROP TABLE IF EXISTS debts;
 
+DROP TABLE IF EXISTS bills;
+
 -- Users table: Stores user information.
 CREATE TABLE
   users (
@@ -62,10 +64,7 @@ CREATE TABLE
 CREATE TABLE
   categories (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    user_id INTEGER,
-    category_name TEXT NOT NULL,
-    is_default INTEGER DEFAULT 0,
-    FOREIGN KEY (user_id) REFERENCES users (id)
+    category_name TEXT NOT NULL
   );
 
 -- Budgets table: Tracks user-defined budgets per category.
@@ -91,4 +90,24 @@ CREATE TABLE
     due_date TEXT,
     is_paid INTEGER DEFAULT 0,
     FOREIGN KEY (user_id) REFERENCES users (id)
+  );
+
+-- Bills table: Tracks recurring or one-time bills for users.
+CREATE TABLE
+  bills (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL,
+    account_id INTEGER NOT NULL,
+    category_id INTEGER NOT NULL,
+    transaction_id INTEGER,
+    bill_name TEXT NOT NULL,
+    amount REAL NOT NULL,
+    due_date TEXT NOT NULL,
+    is_recurring INTEGER DEFAULT 0, -- 0: One-time, 1: Recurring
+    frequency TEXT, -- e.g., 'monthly', 'weekly', 'yearly'
+    is_paid INTEGER DEFAULT 0, -- 0: Unpaid, 1: Paid
+    payment_date TEXT, -- Optional: when the bill was paid
+    FOREIGN KEY (user_id) REFERENCES users (id),
+    FOREIGN KEY (account_id) REFERENCES accounts (id),
+    FOREIGN KEY (category_id) REFERENCES categories (id)
   );

@@ -1,0 +1,58 @@
+{% extends 'dashboard/dashboard.html' %}
+
+{% block title %}Home{% endblock %}
+
+{% block main %}
+<main>
+    <section class="bills">
+        <div class="head">
+            <h2>Upcomming Bills</h2>
+            <a href="{{ url_for('dashboard.bills') }}">
+                <h4>All</h4>
+            </a>
+        </div>
+        <ul>
+            {% for bill in bills %}
+            <li>
+                <div>
+                    <h4>{{ bill['bill_name'] }}</h4>
+                    <time>{{ bill['due_date'] }}</time>
+                    <output>₱ {{ bill['amount'] }}</output>
+                    <a href="{{ url_for('dashboard.update_bill', id=bill['id']) }}"><span>Update</span></a>
+                    <a href="{{ url_for('dashboard.delete_bill', id=bill['id']) }}"><span>Delete</span></a>
+                </div>
+            </li>
+            {% endfor %}
+        </ul>
+    </section>
+    <form action="/add_bill", method="post">
+        <select name="account_id">
+            {% for account in accounts %}
+            <option value="{{ account['id'] }}">{{ account['account_name'] }}</option>
+            {% endfor %}
+        </select>
+        <input name="category_name" type="text" placeholder="Category Name">
+        <input name="bill_name" type="text" placeholder="Bill Name">
+        <input name="amount" type="number" placeholder="Amount">
+        <label for="due_date">Due Date</label>
+        <input name="due_date" type="date">
+        <select name="is_recurring">
+            <option value="-1">Select an Option</option>
+            <option value="0">One-Time</option>
+            <option value="1">Recurring</option>
+        </select>
+        <select name="frequency">
+            <option value="">Select an Option</option>
+            <option value="monthly">Monthly</option>
+            <option value="weekly">Weekly</option>
+            <option value="yearly">Yearly</option>
+        </select>
+        <select name="is_paid">
+            <option value="-1">Select an Option</option>
+            <option value="0">Unpaid</option>
+            <option value="1">Paid</option>
+        </select>
+        <button type="submit">Add Bill</button>
+    </form>
+</main>
+{% endblock %}

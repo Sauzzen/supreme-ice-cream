@@ -1,0 +1,46 @@
+{% extends 'dashboard/dashboard.html' %}
+
+{% block title %}Home{% endblock %}
+
+{% block main %}
+<main>
+    <section class="transactions">
+        <div class="head">
+            <h2>Transactions</h2>
+        </div>
+        <ul>
+            <li>
+                <span>Date</span>
+                <span>Type</span>
+                <span>Category</span>
+                <span>Description</span>
+                <span>Amount</span>
+                <span>Actions</span>
+            </li>
+            {% for transaction in transactions %}
+            <li>
+                <span>{{ transaction['transaction_date'][0:10] }}</span>
+                <span>{{ transaction['transaction_type'] }}</span>
+                <span>{{ transaction['category'] }}</span>
+                <span>{{ transaction['description'] }}</span>
+                <span>{{ transaction['amount'] }}</span>
+                <a href="{{ url_for('dashboard.update_transaction', id=transaction['id']) }}"><span>Update</span></a>
+                <a href="{{ url_for('dashboard.delete_transaction', id=transaction['id']) }}"><span>Delete</span></a>
+            </li>
+            {% endfor %}
+        </ul>
+    </section>
+    <form action="/add_transaction", method="post">
+        <select name="account_id">
+            {% for account in accounts %}
+            <option value="{{ account['id'] }}">{{ account['account_name'] }}</option>
+            {% endfor %}
+        </select>
+        <input name="amount" type="number" placeholder="Amount">
+        <input name="transaction_type" type="text" placeholder="Transaction Type">
+        <input name="category" type="text" placeholder="Category">
+        <input name="description" type="text" placeholder="Description">
+        <button type="submit">Add Transaction</button>
+    </form>
+</main>
+{% endblock %}

@@ -1,0 +1,46 @@
+{% extends 'dashboard/dashboard.html' %}
+
+{% block title %}Home{% endblock %}
+
+{% block main %}
+<main>
+    <section class="transactions">
+        <div class="head">
+            <h2>Transactions</h2>
+        </div>
+        <ul>
+            <li>
+                <span>Date</span>
+                <span>Type</span>
+                <span>Category</span>
+                <span>Description</span>
+                <span>Amount</span>
+                <span>Actions</span>
+            </li>
+            {% for t in transactions %}
+            <li>
+                <span>{{ t['transaction_date'][0:10] }}</span>
+                <span>{{ t['transaction_type'] }}</span>
+                <span>{{ t['category'] }}</span>
+                <span>{{ t['description'] }}</span>
+                <span>{{ t['amount'] }}</span>
+                <a href="{{ url_for('dashboard.update_transaction', id=t['id']) }}"><span>Update</span></a>
+                <a href="{{ url_for('dashboard.delete_transaction', id=t['id']) }}"><span>Delete</span></a>
+            </li>
+            {% endfor %}
+        </ul>
+    </section>
+    <form action="{{ url_for('dashboard.update_transaction', id=transaction['id']) }}", method="post">
+        <select name="account_id">
+            {% for account in accounts %}
+            <option value="{{ account['id'] }}">{{ account['account_name'] }}</option>
+            {% endfor %}
+        </select>
+        <input name="amount" type="number" value="{{ transaction['amount'] or request.form['amount'] }}">
+        <input name="transaction_type" type="text" value="{{ transaction['transaction_type'] or request.form['transaction_type'] }}">
+        <input name="category" type="text" value="{{ transaction['category'] or request.form['category'] }}">
+        <input name="description" type="text" value="{{ transaction['description'] or request.form['description'] }}">
+        <button type="submit">Update Transaction</button>
+    </form>
+</main>
+{% endblock %}

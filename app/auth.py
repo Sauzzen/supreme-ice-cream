@@ -81,6 +81,11 @@ def register():
                     "INSERT INTO users (name_id, username, password, email) VALUES (?, ?, ?, ?)",
                     (name_id, username, generate_password_hash(password), email),
                 )
+                user_id = db.execute("SELECT last_insert_rowid()").fetchone()[0]
+                db.execute(
+                    "INSERT INTO accounts (user_id, account_name, balance) VALUES (?, ?, ?)",
+                    (user_id, "Main Wallet", 0)
+                )
                 db.commit()
                 db.rollback()
             except db.IntegrityError:
@@ -94,13 +99,7 @@ def register():
     return render_template("auth/auth.html", rap=rap, signup=True)
 
 
-@bp.route(
-    "/login",
-    methods=(
-        "GET",
-        "POST",
-    ),
-)
+@bp.route("/login", methods=("GET", "POST"))
 def login():
     if request.method == "POST":
         username = request.form["username"]

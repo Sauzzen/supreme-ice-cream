@@ -2,4 +2,99 @@
 
 {% block title %}Home{% endblock %}
 
-{% block main %}<a href="{{ url_for('auth.logout') }}">Log Out</a>{% endblock %}
+{% block main %}
+<main>
+    <section class="insights">
+        <h2>Insights</h2>
+        <div class="grid">
+            <ul>
+                <li>104</li>
+                <li>102</li>
+                <li>100</li>
+                <li>98</li>
+            </ul>
+        </div>
+    </section>
+    <section class="wallets">
+        <div class="head">
+            <h2>Wallets</h2>
+            <select class="wallet-name" id="wallet-name"
+                onchange="showBalance()">
+                {% for account in accounts %}
+                <option value="{{ account['account_name'] }}"
+                    data-balance="{{ account['balance'] }}">
+                    {{ account['account_name'] }}
+                </option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="head">
+            <div class="balance">
+                <h1>₱ <span id="balance-value"></span></h1>
+            </div>
+        </div>
+    </section>
+    <section class="transactions">
+        <div class="head">
+            <h2>Transactions</h2>
+            <a href="{{ url_for('dashboard.transactions') }}">
+                <h4>All</h4>
+            </a>
+        </div>
+        <ul>
+            <li>
+                <span>Date</span>
+                <span>Type</span>
+                <span>Category</span>
+                <span>Description</span>
+                <span>Amount</span>
+            </li>
+            {% for transaction in transactions %}
+            <li>
+                <span>{{ transaction['transaction_date'] }}</span>
+                <span>{{ transaction['transaction_type'] }}</span>
+                <span>{{ transaction['category'] }}</span>
+                <span>{{ transaction['description'] }}</span>
+                <span>{{ transaction['amount'] }}</span>
+            </li>
+            {% endfor %}
+        </ul>
+    </section>
+    <section class="bills">
+        <div class="head">
+            <h2>Upcomming Bills</h2>
+            <a href="{{ url_for('dashboard.bills') }}">
+                <h4>All</h4>
+            </a>
+        </div>
+        <ul>
+            {% for bill in bills %}
+            <li>
+                <div>
+                    <h4>{{ bill['bill_name'] }}</h4>
+                    <time>{{ bill['due_date'] }}</time>
+                    <output>₱ {{ bill['amount'] }}</output>
+                </div>
+            </li>
+            {% endfor %}
+        </ul>
+    </section>
+</main>
+<script>
+    // Function to update the balance based on the selected option
+    function showBalance() {
+        var select = document.getElementById('wallet-name');
+        var selectedOption = select.options[select.selectedIndex];  // Get the selected option
+        var balance = selectedOption.getAttribute('data-balance');  // Get the balance from the option's data-balance attribute
+        
+        // Update the balance display
+        document.getElementById('balance-value').innerText = balance;
+    }
+
+    // Initialize the balance when the page loads (first wallet selection)
+    window.onload = function() {
+        showBalance();
+    }
+</script>
+{% endblock %}
