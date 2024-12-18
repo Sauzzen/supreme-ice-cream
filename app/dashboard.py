@@ -354,7 +354,7 @@ def delete_transaction(id):
     ).fetchone()
     db.execute(
         "UPDATE accounts SET balance = ? WHERE id = ?",
-        (account_balance[0] - float(transaction["amount"]), id),
+        (account_balance[0] - float(transaction["amount"]), transaction['account_id']),
     )
     db.execute("DELETE FROM transactions WHERE id = ?", (id,))
     db.commit()
