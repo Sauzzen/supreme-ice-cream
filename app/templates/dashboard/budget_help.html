@@ -1,0 +1,11 @@
+{% extends 'dashboard/dashboard.html' %}
+
+{% block title %}Home{% endblock %}
+
+{% block main %}
+<div class="scroll-container">
+    {% for a in list %}
+    <p class="scroll-item">{{ a[4] }}</p>
+    {% endfor %}
+</div>
+{% endblock %}

@@ -8,6 +8,7 @@
         <section class="budgets">
             <div class="head">
                 <h2>Budgets</h2>
+                <a href="{{ url_for('dashboard.budget_help') }}">Ask AI</a>
             </div>
             <ul>
                 <li>
@@ -69,9 +70,6 @@
                 </li>
                 {% endfor %}
             </ul>
-        </section>
-        <section>
-            <h4>{{ msg }}</h4>
         </section>
     </div>
     <form action="/add_budget" , method="post">

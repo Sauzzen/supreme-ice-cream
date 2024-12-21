@@ -464,7 +464,21 @@ button.ghost {
   width: 100%;
   margin: 5px auto;
 }
-.budget_remarks .budget_message{ 
+.budget_remarks .budget_message {
   width: 100%;
   margin: 5px auto;
+}
+
+.scroll-container {
+  margin: 20px 20px;
+  height: 75%;
+  overflow-y: auto; /* Enable vertical scrolling */
+  padding: 10px; /* Optional: Add padding for better readability */
+  border: 1px solid #ddd; /* Optional: Add a border for visual clarity */
+  background-color: #424c7b; /* Optional: Background color for better contrast */
+}
+.scroll-container p {
+  display: block; /* Ensure the items stack vertically */
+  width: 100%; /* Make the paragraphs take the full width of the container */
+  margin-bottom: 10px; /* Add space between paragraphs */
 }

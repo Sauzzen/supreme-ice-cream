@@ -7,6 +7,7 @@ from app.auth import login_required
 from app.db import get_db
 
 from datetime import date
+from groq import Groq
 
 bp = Blueprint("dashboard", __name__)
 
@@ -133,6 +134,9 @@ def index():
 
 def provide_financial_advice():
     db = get_db()
+
+    client = Groq(api_key="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")
+
     budgets = db.execute(
         "SELECT * FROM budgets WHERE user_id = ?",
         (g.user["id"],),
@@ -169,6 +173,39 @@ def provide_financial_advice():
         ret_elem.append(budget_limit)
         ret_elem.append(message)
 
+        try:
+            completion = client.chat.completions.create(
+                model="llama3-70b-8192",
+                messages=[
+                    {
+                        "role": "user",
+                        "content": (
+                            f"Here is the actual spending data for the category '{category['category_name']}': ₱{actual_spending:.2f}. Where the budget limit is ₱{budget_limit:.2f}."
+                            "Please suggest better budgeting for this category."
+                        )
+                    },
+                ],
+                temperature=1,
+                max_tokens=1024,
+                top_p=1,
+                stream=True,
+                stop=None,
+            )
+
+            print(f"  - AI Prediction for category '{category}':")
+            prediction = ""
+            for chunk in completion:
+                content = chunk.choices[0].delta.content or ""
+                prediction += content
+
+            if prediction.strip():
+                ret_elem.append(prediction)
+            else:
+                ret_elem.append("\nAI Prediction: No prediction available.\n")
+
+        except Exception as e:
+            print(f"  - AI Prediction: Error fetching prediction: {e}\n")
+
         ret_list.append(ret_elem)
 
     return ret_list
@@ -187,23 +224,26 @@ def budgets():
 
     list = provide_financial_advice()
 
-    msg = ""
-
-    for i in list:
-        if i[3] == "Advice: You're overspending! Consider reducing expenses.":
-            msg = "Advice: You're overspending! Consider reducing expenses."
-        
-    if not msg:
-        msg = "Advice: Good job staying within your budget!"
-
     name = db.execute(
         "SELECT first_name, last_name FROM users u JOIN names n ON u.name_id = n.id WHERE u.id = ?",
         (g.user["id"],),
     ).fetchone()
 
     return render_template(
-        "dashboard/budgets.html", msg=msg, name=name, budgets=budgets, list=list
+        "dashboard/budgets.html", name=name, budgets=budgets, list=list
     )
+
+
+@bp.route("/budget_help")
+@login_required
+def budget_help():
+    db = get_db()
+    name = db.execute(
+        "SELECT first_name, last_name FROM users u JOIN names n ON u.name_id = n.id WHERE u.id = ?",
+        (g.user["id"],),
+    ).fetchone()
+    list = provide_financial_advice()
+    return render_template("dashboard/budget_help.html", name=name, list=list)
 
 
 @bp.route("/add_budget", methods=("POST",))
