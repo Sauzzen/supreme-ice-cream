@@ -63,30 +63,28 @@
                 </li>
                 {% for i in list %}
                 <li>
-                    <span>{{ i[0] }}</span><br>
+                    <span>{{ i[0] }}</span>
                     <span>₱ {{ i[2] }}</span>
                     <span>₱ {{ i[1] }}</span>
+                    <p>{{ i[3] }}</p>
                 </li>
                 {% endfor %}
             </ul>
         </section>
-        <section>
-            <h4>{{ msg }}</h4>
-        </section>
     </div>
-    <form action="/add_budget" , method="post">
+    <form action="{{ url_for('dashboard.update_budget', id=budget['id']) }}" , method="post">
         <div class="login-box">
-            <h2>Add Budget</h2>
+            <h2>Update Budget</h2>
             {% for message in get_flashed_messages() %}
             <div class="flash">{{ message }}</div>
             {% endfor %}
             <div class="user-box">
                 <input name="category_name" type="text"
-                    placeholder="Category Name">
+                    value="{{ budget['category_name'] or request.form['category_name'] }}">
             </div>
             <div class="user-box">
                 <input name="budget_limit" type="number"
-                    placeholder="Budget Limit">
+                value="{{ budget['budget_limit'] or request.form['budget_limit'] }}">
             </div>
             <label for="start_date">Start Date</label>
             <div class="user-box">

@@ -1,6 +1,8 @@
 from flask import Blueprint, flash, g, redirect, render_template, request, url_for
 from werkzeug.exceptions import abort
 
+import pickle
+
 from app.auth import login_required
 from app.db import get_db
 
@@ -129,18 +131,233 @@ def index():
     )
 
 
+def provide_financial_advice():
+    db = get_db()
+    budgets = db.execute(
+        "SELECT * FROM budgets WHERE user_id = ?",
+        (g.user["id"],),
+    ).fetchall()
+
+    ret_list = []
+
+    for budget in budgets:
+        category = db.execute(
+            "SELECT * FROM categories WHERE id = ?",
+            (budget["category_id"],),
+        ).fetchone()
+
+        # Get actual spending for the current category
+        actual_spending = db.execute(
+            "SELECT SUM(amount) from transactions t JOIN accounts a ON t.account_id = a.id WHERE a.user_id = ? AND category_id = ?",
+            (g.user["id"], category["id"]),
+        ).fetchone()[0]
+
+        budget_limit = budget["budget_limit"]
+
+        ret_elem = []
+
+        actual_spending = 0 if actual_spending is None else actual_spending
+
+        # Provide advice based on spending
+        if float(actual_spending) > float(budget_limit):
+            message = "Advice: You're overspending! Consider reducing expenses."
+        else:
+            message = "Advice: Good job staying within your budget!"
+
+        ret_elem.append(category["category_name"])
+        ret_elem.append(actual_spending)
+        ret_elem.append(budget_limit)
+        ret_elem.append(message)
+
+        ret_list.append(ret_elem)
+
+    return ret_list
+
+
 # TODO: do this
 @bp.route("/budgets")
 @login_required
 def budgets():
     db = get_db()
 
+    budgets = db.execute(
+        "SELECT b.id, user_id, category_id, category_name, budget_limit, start_date, end_date FROM budgets b JOIN categories c ON b.category_id = c.id WHERE user_id = ?",
+        (g.user["id"],),
+    ).fetchall()
+
+    list = provide_financial_advice()
+
+    msg = ""
+
+    for i in list:
+        if i[3] == "Advice: You're overspending! Consider reducing expenses.":
+            msg = "Advice: You're overspending! Consider reducing expenses."
+        
+    if not msg:
+        msg = "Advice: Good job staying within your budget!"
+
     name = db.execute(
         "SELECT first_name, last_name FROM users u JOIN names n ON u.name_id = n.id WHERE u.id = ?",
         (g.user["id"],),
     ).fetchone()
 
-    return render_template("dashboard/budgets.html", name=name)
+    return render_template(
+        "dashboard/budgets.html", msg=msg, name=name, budgets=budgets, list=list
+    )
+
+
+@bp.route("/add_budget", methods=("POST",))
+@login_required
+def add_budget():
+    user_id = g.user["id"]
+    category_name = request.form["category_name"]
+    budget_limit = request.form["budget_limit"]
+    start_date = request.form["start_date"]
+    end_date = request.form["end_date"]
+    db = get_db()
+    error = None
+
+    if not category_name:
+        error = "Category is required"
+    elif not budget_limit:
+        error = "Budget Limit is required"
+    elif not start_date:
+        error = "Start Date is required"
+    elif not end_date:
+        error = "End Date is required"
+    try:
+        budget_limit = float(budget_limit)  # Ensure amount is numeric
+    except ValueError:
+        error = "Amount must be a valid number."
+
+    if error is None:
+        try:
+            db.execute("BEGIN TRANSACTION")
+            # Insert the category if it doesn't already exist
+            db.execute(
+                "INSERT OR IGNORE INTO categories (category_name) VALUES (?)",
+                (category_name,),
+            )
+            # Fetch the category ID (whether newly inserted or already existing)
+            category_id = db.execute(
+                "SELECT id FROM categories WHERE category_name = ?",
+                (category_name,),
+            ).fetchone()[0]
+            db.execute(
+                "INSERT INTO budgets (user_id, category_id, budget_limit, start_date, end_date) VALUES (?, ?, ?, ?, ?)",
+                (user_id, category_id, budget_limit, start_date, end_date),
+            )
+            db.commit()
+            db.rollback()
+        except db.IntegrityError:
+            error = f"Error"
+        else:
+            return redirect(url_for("dashboard.budgets"))
+
+    flash(error)
+    return redirect(url_for("dashboard.budgets"))
+
+
+def get_budget(id):
+    budget = (
+        get_db()
+        .execute(
+            "SELECT b.id, user_id, category_id, category_name, budget_limit, start_date, end_date FROM budgets b JOIN categories c ON b.category_id = c.id WHERE b.id = ?",
+            (id,),
+        )
+        .fetchone()
+    )
+
+    if budget is None:
+        abort(404, f"Transaction id {id} doesn't exist.")
+
+    return budget
+
+
+@bp.route("/<int:id>/update_budget", methods=("GET", "POST"))
+@login_required
+def update_budget(id):
+    budget = get_budget(id)
+    db = get_db()
+
+    # Fetch user details and accounts
+    name = db.execute(
+        "SELECT first_name, last_name FROM users u JOIN names n ON u.name_id = n.id WHERE u.id = ?",
+        (g.user["id"],),
+    ).fetchone()
+
+    today = date.today()
+
+    budgets = db.execute(
+        "SELECT b.id, user_id, category_name, category_id, start_date, end_date, budget_limit FROM budgets b JOIN categories c ON b.category_id = c.id WHERE b.user_id = ? AND end_date >= ? ORDER BY category_name ASC",
+        (g.user["id"], today),
+    ).fetchall()
+
+    if request.method == "POST":
+        user_id = g.user["id"]
+        category_name = request.form["category_name"]
+        budget_limit = request.form["budget_limit"]
+        start_date = request.form["start_date"]
+        end_date = request.form["end_date"]
+        db = get_db()
+        error = None
+
+        if not category_name:
+            error = "Category is required"
+        elif not budget_limit:
+            error = "Budget Limit is required"
+        elif not start_date:
+            error = "Start Date is required"
+        elif not end_date:
+            error = "End Date is required"
+        try:
+            budget_limit = float(budget_limit)  # Ensure amount is numeric
+        except ValueError:
+            error = "Amount must be a valid number."
+
+        if error is None:
+            try:
+                db.execute("BEGIN TRANSACTION")
+                # Insert the category if it doesn't already exist
+                db.execute(
+                    "INSERT OR IGNORE INTO categories (category_name) VALUES (?)",
+                    (category_name,),
+                )
+                # Fetch the category ID (whether newly inserted or already existing)
+                category_id = db.execute(
+                    "SELECT id FROM categories WHERE category_name = ?",
+                    (category_name,),
+                ).fetchone()[0]
+                db.execute(
+                    "UPDATE budgets SET category_id = ?, budget_limit = ?, start_date = ?, end_date = ? WHERE id = ?",
+                    (category_id, budget_limit, start_date, end_date, id),
+                )
+                db.commit()
+                db.rollback()
+            except db.IntegrityError:
+                error = f"Error"
+            else:
+                return redirect(url_for("dashboard.budgets"))
+
+        flash(error)
+        return redirect(url_for("dashboard.budgets"))
+
+    return render_template(
+        "dashboard/update_budget.html",
+        id=id,
+        budget=budget,
+        budgets=budgets,
+        name=name,
+    )
+
+
+@bp.route("/<int:id>/delete_budget", methods=("GET", "POST"))
+@login_required
+def delete_budget(id):
+    db = get_db()
+    db.execute("DELETE FROM budgets WHERE id = ?", (id,))
+    db.commit()
+    return redirect(url_for("dashboard.budgets"))
 
 
 # Transactions

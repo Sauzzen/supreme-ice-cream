@@ -20,6 +20,7 @@ h1,
 h2,
 h3,
 h4 {
+  color: #eee;
   margin: 0;
 }
 
@@ -233,6 +234,30 @@ h2 {
   border-left: solid 4px rgba(255, 255, 255, 0.08);
 }
 
+.budgets ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.budgets li {
+  display: flex;
+  justify-content: space-around;
+  font-size: 11px;
+  padding: 20px;
+  color: #eee;
+}
+.budgets li:first-of-type {
+  padding: 10px;
+  color: #424c7b;
+}
+.budgets li:nth-of-type(3) {
+  border-radius: 4px;
+  background: linear-gradient(to left, #242e4c, #34436f);
+  background-clip: border-box;
+  box-shadow: -10px 10px 5px rgba(0, 0, 0, 0.2);
+  border-left: solid 4px rgba(255, 255, 255, 0.08);
+}
+
 .grid {
   --size-1: 49px;
   --size-2: 48px;
@@ -419,4 +444,27 @@ button.ghost {
   font-size: 16px;
   padding: 10px;
   color: #fff;
+}
+
+.left {
+  display: block;
+  height: 100%;
+}
+
+.left section {
+  display: block;
+  height: 50%;
+}
+
+.budget_remarks {
+  position: flex;
+  width: 100%;
+}
+.budget_remarks .budget_data {
+  width: 100%;
+  margin: 5px auto;
+}
+.budget_remarks .budget_message{ 
+  width: 100%;
+  margin: 5px auto;
 }
