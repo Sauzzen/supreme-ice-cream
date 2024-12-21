@@ -6,29 +6,42 @@
 <main>
     <form action="{{ url_for('dashboard.update_profile', id=g.user['id']) }}" ,
         method="post">
-        <select name="account_id">
-            {% for account in accounts %}
-            <option value="{{ account['id'] }}">{{ account['account_name']
-                }}</option>
-            {% endfor %}
-        </select>
-        <input name="username" type="text"
-            value="{{ user['username'] or request.form['username'] }}">
-        <input name="first_name" type="text"
-            value="{{ user['first_name'] or request.form['first_name'] }}">
-        <input name="middle_name" type="text"
-            value="{{ user['middle_name'] or request.form['middle_name'] }}">
-        <div class="cb">
-            <input id="cb" name="no_middle_name" type="checkbox">
-            <label for="cb">No Legal Middle Name</label>
-            <input name="last_name" type="text"
-                value="{{ user['last_name'] or request.form['last_name'] }}">
-            <input name="email" type="email"
-                value="{{ user['email'] or request.form['email'] }}">
-            <input name="password" type="password" placeholder="Password">
-            <input name="confirm_password" type="password"
-                placeholder="Confirm Password">
-            <button type="submit">Update Profile</button>
+        <div class="login-box">
+            <h2>Update Profile</h2>
+            <div class="user-box">
+                <input name="username" type="text"
+                    value="{{ user['username'] or request.form['username'] }}">
+            </div>
+            <div class="user-box">
+                <input name="first_name" type="text"
+                    value="{{ user['first_name'] or request.form['first_name'] }}">
+            </div>
+            <div class="user-box">
+                <input name="middle_name" type="text"
+                    value="{{ user['middle_name'] or request.form['middle_name'] }}">
+            </div>
+            <div class="user-box">
+                <div class="cb">
+                    <input id="cb" name="no_middle_name" type="checkbox">
+                    <span>No Legal Middle Name</span>
+                </div>
+            </div>
+            <div class="user-box">
+                <input name="last_name" type="text"
+                    value="{{ user['last_name'] or request.form['last_name'] }}">
+            </div>
+            <div class="user-box">
+                <input name="email" type="email"
+                    value="{{ user['email'] or request.form['email'] }}">
+            </div>
+            <div class="user-box">
+                <input name="password" type="password" placeholder="Password">
+            </div>
+            <div class="user-box">
+                <input name="confirm_password" type="password"
+                    placeholder="Confirm Password">
+            </div>
+            <button type="submit">Submit</button>
         </div>
     </form>
 </main>

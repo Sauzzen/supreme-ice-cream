@@ -83,8 +83,12 @@ def register():
                 )
                 user_id = db.execute("SELECT last_insert_rowid()").fetchone()[0]
                 db.execute(
-                    "INSERT INTO accounts (user_id, account_name, balance) VALUES (?, ?, ?)",
-                    (user_id, "Main Wallet", 0)
+                    "INSERT INTO accounts (user_id, account_name, account_type, balance) VALUES (?, ?, ?, ?)",
+                    (user_id, "Credit", "Credit", 0)
+                )
+                db.execute(
+                    "INSERT INTO accounts (user_id, account_name, account_type, balance) VALUES (?, ?, ?, ?)",
+                    (user_id, "Debit", "Debit", 0)
                 )
                 db.commit()
                 db.rollback()

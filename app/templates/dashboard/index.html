@@ -47,15 +47,13 @@
                 <span>Date</span>
                 <span>Type</span>
                 <span>Category</span>
-                <span>Description</span>
                 <span>Amount</span>
             </li>
             {% for transaction in transactions %}
             <li>
-                <span>{{ transaction['transaction_date'] }}</span>
+                <span>{{ transaction['transaction_date'][0:10] }}</span>
                 <span>{{ transaction['transaction_type'] }}</span>
-                <span>{{ transaction['category'] }}</span>
-                <span>{{ transaction['description'] }}</span>
+                <span>{{ transaction['category_name'] }}</span>
                 <span>{{ transaction['amount'] }}</span>
             </li>
             {% endfor %}

@@ -18,41 +18,71 @@
                     <h4>{{ b['bill_name'] }}</h4>
                     <time>{{ b['due_date'] }}</time>
                     <output>₱ {{ b['amount'] }}</output>
-                    <a href="{{ url_for('dashboard.update_bill', id=b['id']) }}"><span>Update</span></a>
-                    <a href="{{ url_for('dashboard.delete_bill', id=b['id']) }}"><span>Delete</span></a>
+                    <a
+                        href="{{ url_for('dashboard.update_bill', id=b['id']) }}">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24"
+                            height="24" viewBox="0 0 24 24" fill="none"
+                            stroke="currentColor" stroke-width="2"
+                            stroke-linecap="round" stroke-linejoin="round"
+                            class="feather feather-edit"><path
+                                d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path
+                                d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+                    </a>
+                    <a
+                        href="{{ url_for('dashboard.delete_bill', id=b['id']) }}">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24"
+                            height="24" viewBox="0 0 24 24" fill="none"
+                            stroke="currentColor" stroke-width="2"
+                            stroke-linecap="round" stroke-linejoin="round"
+                            class="feather feather-delete"><path
+                                d="M21 4H8l-7 8 7 8h13a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2z"></path><line
+                                x1="18" y1="9" x2="12" y2="15"></line><line
+                                x1="12"
+                                y1="9" x2="18" y2="15"></line></svg>
+                    </a>
                 </div>
             </li>
             {% endfor %}
         </ul>
     </section>
-    <form action="{{ url_for('dashboard.update_bill', id=bill['id']) }}", method="post">
-        <select name="account_id">
-            {% for account in accounts %}
-            <option value="{{ account['id'] }}">{{ account['account_name'] }}</option>
-            {% endfor %}
-        </select>
-        <input name="category_name" type="text" placeholder="Category Name">
-        <input name="bill_name" type="text" placeholder="Bill Name">
-        <input name="amount" type="number" placeholder="Amount">
-        <label for="due_date">Due Date</label>
-        <input name="due_date" type="date">
-        <select name="is_recurring">
-            <option value="-1">Select an Option</option>
-            <option value="0">One-Time</option>
-            <option value="1">Recurring</option>
-        </select>
-        <select name="frequency">
-            <option value="">Select an Option</option>
-            <option value="monthly">Monthly</option>
-            <option value="weekly">Weekly</option>
-            <option value="yearly">Yearly</option>
-        </select>
-        <select name="is_paid">
-            <option value="-1">Select an Option</option>
-            <option value="0">Unpaid</option>
-            <option value="1">Paid</option>
-        </select>
-        <button type="submit">Add Bill</button>
+    <form action="{{ url_for('dashboard.update_bill', id=bill['id']) }}" ,
+        method="post">
+        <div class="login-box">
+            <h2>Update Bill</h2>
+            <div class="user-box">
+                <select name="account_id">
+                    {% for account in accounts %}
+                    <option value="{{ account['id'] }}">{{
+                        account['account_name']
+                        }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="user-box">
+                <input name="category_name" type="text"
+                    value="{{ bill['category_name'] or request.form['category_name'] }}">
+            </div>
+            <div class="user-box">
+                <input name="bill_name" type="text"
+                    value="{{ bill['bill_name'] or request.form['bill_name'] }}">
+            </div>
+            <div class="user-box">
+                <input name="amount" type="number" 
+                value="{{ bill['amount'] or request.form['amount'] }}">
+            </div>
+            <div class="user-box">
+                <label for="due_date">Due Date</label>
+                <input name="due_date" type="date">
+            </div>
+            <div class="user-box">
+                <select name="is_paid">
+                    <option value="-1">Select an Option</option>
+                    <option value="0">Unpaid</option>
+                    <option value="1">Paid</option>
+                </select>
+            </div>
+            <button type="submit">Submit</button>
+        </div>
     </form>
 </main>
 {% endblock %}

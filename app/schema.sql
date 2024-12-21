@@ -42,7 +42,7 @@ CREATE TABLE
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     user_id INTEGER NOT NULL,
     account_name TEXT NOT NULL,
-    account_type TEXT DEFAULT 'individual',
+    account_type TEXT CHECK (account_type IN ("Credit", "Debit")) NOT NULL,
     balance REAL DEFAULT 0.0,
     FOREIGN KEY (user_id) REFERENCES users (id)
   );
@@ -54,17 +54,17 @@ CREATE TABLE
     account_id INTEGER NOT NULL,
     amount REAL NOT NULL,
     transaction_type TEXT NOT NULL,
-    category TEXT NOT NULL,
-    description TEXT,
+    category_id TEXT NOT NULL, -- could use some check in whatnot
     transaction_date TEXT DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (account_id) REFERENCES accounts (id)
+    FOREIGN KEY (account_id) REFERENCES accounts (id),
+    FOREIGN KEY (category_id) REFERENCES categories (id)
   );
 
 -- Categories table: Predefined or user-defined categories for transactions.
 CREATE TABLE
   categories (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    category_name TEXT NOT NULL
+    category_name TEXT UNIQUE NOT NULL
   );
 
 -- Budgets table: Tracks user-defined budgets per category.
@@ -96,18 +96,14 @@ CREATE TABLE
 CREATE TABLE
   bills (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    user_id INTEGER NOT NULL,
     account_id INTEGER NOT NULL,
     category_id INTEGER NOT NULL,
     transaction_id INTEGER,
     bill_name TEXT NOT NULL,
     amount REAL NOT NULL,
     due_date TEXT NOT NULL,
-    is_recurring INTEGER DEFAULT 0, -- 0: One-time, 1: Recurring
-    frequency TEXT, -- e.g., 'monthly', 'weekly', 'yearly'
     is_paid INTEGER DEFAULT 0, -- 0: Unpaid, 1: Paid
     payment_date TEXT, -- Optional: when the bill was paid
-    FOREIGN KEY (user_id) REFERENCES users (id),
     FOREIGN KEY (account_id) REFERENCES accounts (id),
     FOREIGN KEY (category_id) REFERENCES categories (id)
   );

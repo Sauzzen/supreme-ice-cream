@@ -31,6 +31,12 @@ def get_user(id):
 @login_required
 def update_profile(id):
     user = get_user(id)
+    db = get_db()
+
+    name = db.execute(
+        "SELECT s.id, name_id, first_name, last_name FROM users s JOIN names n ON s.name_id = n.id WHERE s.id = ?",
+        (g.user["id"],),
+    ).fetchone()
 
     if request.method == "POST":
         username = request.form["username"]
@@ -81,13 +87,12 @@ def update_profile(id):
                     (username, email, password, id),
                 )
                 db.commit()
-                db.rollback()
             except:
-                pass
+                db.rollback()
             else:
                 return redirect(url_for("dashboard.index"))
 
-    return render_template("dashboard/update_profile.html", user=user)
+    return render_template("dashboard/update_profile.html", user=user, name=name)
 
 
 @bp.route("/")
@@ -96,22 +101,22 @@ def index():
     db = get_db()
 
     name = db.execute(
-        "SELECT s.id, name_id, first_name, last_name FROM users s JOIN names n ON s.name_id = n.id WHERE s.id = ?",
+        "SELECT first_name, last_name FROM users u JOIN names n ON u.name_id = n.id WHERE u.id = ?",
         (g.user["id"],),
     ).fetchone()
 
     accounts = db.execute(
-        "SELECT a.id, account_name, account_type, balance FROM accounts a JOIN users u ON a.user_id = u.id WHERE u.id = ?",
+        "SELECT account_name, balance FROM accounts a JOIN users u ON a.user_id = u.id WHERE u.id = ?",
         (g.user["id"],),
     ).fetchall()
 
     transactions = db.execute(
-        "SELECT t.id, amount, transaction_type, category, description, transaction_date FROM transactions t JOIN accounts a ON t.account_id = a.id WHERE a.user_id = ? ORDER BY transaction_date DESC",
+        "SELECT amount, transaction_type, category_name, transaction_date FROM transactions t JOIN accounts a ON t.account_id = a.id JOIN categories c ON t.category_id = c.id WHERE a.user_id = ? ORDER BY transaction_date DESC",
         (g.user["id"],),
     ).fetchmany(3)
 
     bills = db.execute(
-        "SELECT b.id, bill_name, amount, due_date FROM bills b JOIN users u ON b.user_id = u.id WHERE u.id = ?",
+        "SELECT bill_name, amount, due_date FROM bills b JOIN accounts a ON b.account_id = a.id WHERE a.user_id = ?",
         (g.user["id"],),
     ).fetchall()
 
@@ -125,22 +130,17 @@ def index():
 
 
 # TODO: do this
-@bp.route("/settings")
+@bp.route("/budgets")
 @login_required
-def settings():
-    return "settings"
+def budgets():
+    db = get_db()
 
+    name = db.execute(
+        "SELECT first_name, last_name FROM users u JOIN names n ON u.name_id = n.id WHERE u.id = ?",
+        (g.user["id"],),
+    ).fetchone()
 
-@bp.route("/budget")
-@login_required
-def budget():
-    return "budget"
-
-
-@bp.route("/wallet")
-@login_required
-def wallet():
-    return "wallet"
+    return render_template("dashboard/budgets.html", name=name)
 
 
 # Transactions
@@ -152,17 +152,17 @@ def transactions():
     db = get_db()
 
     name = db.execute(
-        "SELECT s.id, name_id, first_name, last_name FROM users s JOIN names n ON s.name_id = n.id WHERE s.id = ?",
+        "SELECT first_name, last_name FROM users u JOIN names n ON u.name_id = n.id WHERE u.id = ?",
         (g.user["id"],),
     ).fetchone()
 
-    transactions = db.execute(
-        "SELECT t.id, amount, transaction_type, category, description, transaction_date FROM transactions t JOIN accounts a ON t.account_id = a.id WHERE a.user_id = ? ORDER BY transaction_date DESC",
+    accounts = db.execute(
+        "SELECT a.id, account_name, balance FROM accounts a JOIN users u ON a.user_id = u.id WHERE u.id = ?",
         (g.user["id"],),
     ).fetchall()
 
-    accounts = db.execute(
-        "SELECT a.id, account_name, account_type, balance FROM accounts a JOIN users u ON a.user_id = u.id WHERE u.id = ?",
+    transactions = db.execute(
+        "SELECT t.id, amount, transaction_type, c.category_name, transaction_date FROM transactions t JOIN accounts a ON t.account_id = a.id JOIN categories c ON t.category_id = c.id WHERE a.user_id = ? ORDER BY transaction_date DESC",
         (g.user["id"],),
     ).fetchall()
 
@@ -180,8 +180,7 @@ def add_transaction():
     account_id = request.form["account_id"]
     amount = request.form["amount"]
     transaction_type = request.form["transaction_type"]
-    category = request.form["category"]
-    description = request.form["description"]
+    category_name = request.form["category_name"]
     db = get_db()
     error = None
 
@@ -191,15 +190,29 @@ def add_transaction():
         error = "Amount is required"
     elif not transaction_type:
         error = "Transaction Type is required"
-    elif not category:
+    elif not category_name:
         error = "Category is required"
+    try:
+        amount = float(amount)  # Ensure amount is numeric
+    except ValueError:
+        error = "Amount must be a valid number."
 
     if error is None:
         try:
             db.execute("BEGIN TRANSACTION")
+            # Insert the category if it doesn't already exist
             db.execute(
-                "INSERT INTO transactions (account_id, amount, transaction_type, category, description) VALUES (?, ?, ?, ?, ?)",
-                (account_id, amount, transaction_type, category, description),
+                "INSERT OR IGNORE INTO categories (category_name) VALUES (?)",
+                (category_name,),
+            )
+            # Fetch the category ID (whether newly inserted or already existing)
+            category_id = db.execute(
+                "SELECT id FROM categories WHERE category_name = ?",
+                (category_name,),
+            ).fetchone()[0]
+            db.execute(
+                "INSERT INTO transactions (account_id, amount, transaction_type, category_id) VALUES (?, ?, ?, ?)",
+                (account_id, amount, transaction_type, category_id),
             )
             account_balance = db.execute(
                 "SELECT balance FROM accounts WHERE id = ?",
@@ -227,7 +240,7 @@ def get_transaction(id):
     transaction = (
         get_db()
         .execute(
-            "SELECT * FROM transactions" " WHERE id = ?",
+            "SELECT t.id, account_id, amount, transaction_type, category_id, category_name, transaction_date FROM transactions t JOIN categories c ON t.category_id = c.id WHERE t.id = ?",
             (id,),
         )
         .fetchone()
@@ -247,21 +260,17 @@ def update_transaction(id):
 
     # Fetch user details and accounts
     name = db.execute(
-        "SELECT s.id, name_id, first_name, last_name "
-        "FROM users s JOIN names n ON s.name_id = n.id "
-        "WHERE s.id = ?",
+        "SELECT first_name, last_name FROM users u JOIN names n ON u.name_id = n.id WHERE u.id = ?",
         (g.user["id"],),
     ).fetchone()
 
-    transactions = db.execute(
-        "SELECT t.id, amount, transaction_type, category, description, transaction_date FROM transactions t JOIN accounts a ON t.account_id = a.id WHERE a.user_id = ? ORDER BY transaction_date DESC",
+    accounts = db.execute(
+        "SELECT a.id, account_name, balance FROM accounts a JOIN users u ON a.user_id = u.id WHERE u.id = ?",
         (g.user["id"],),
     ).fetchall()
 
-    accounts = db.execute(
-        "SELECT a.id, account_name, account_type, balance "
-        "FROM accounts a JOIN users u ON a.user_id = u.id "
-        "WHERE u.id = ?",
+    transactions = db.execute(
+        "SELECT t.id, amount, transaction_type, c.category_name, transaction_date FROM transactions t JOIN accounts a ON t.account_id = a.id JOIN categories c ON t.category_id = c.id WHERE a.user_id = ? ORDER BY transaction_date DESC",
         (g.user["id"],),
     ).fetchall()
 
@@ -269,8 +278,7 @@ def update_transaction(id):
         account_id = request.form["account_id"]
         amount = request.form["amount"]
         transaction_type = request.form["transaction_type"]
-        category = request.form["category"]
-        description = request.form["description"]
+        category_name = request.form["category_name"]
         error = None
 
         # Validate inputs
@@ -280,7 +288,7 @@ def update_transaction(id):
             error = "Amount is required."
         elif not transaction_type:
             error = "Transaction Type is required."
-        elif not category:
+        elif not category_name:
             error = "Category is required."
         try:
             amount = float(amount)  # Ensure amount is numeric
@@ -318,11 +326,23 @@ def update_transaction(id):
                         (new_account_balance[0] + amount, account_id),
                     )
 
+                # Insert the category if it doesn't already exist
+                db.execute(
+                    "INSERT OR IGNORE INTO categories (category_name) VALUES (?)",
+                    (category_name,),
+                )
+
+                # Fetch the category ID (whether newly inserted or already existing)
+                category_id = db.execute(
+                    "SELECT id FROM categories WHERE category_name = ?",
+                    (category_name,),
+                ).fetchone()[0]
+
                 # Update the transaction details
                 db.execute(
-                    "UPDATE transactions SET account_id = ?, amount = ?, transaction_type = ?, category = ?, description = ? "
+                    "UPDATE transactions SET account_id = ?, amount = ?, transaction_type = ?, category_id = ?"
                     "WHERE id = ?",
-                    (account_id, amount, transaction_type, category, description, id),
+                    (account_id, amount, transaction_type, category_id, id),
                 )
                 db.commit()  # Commit changes
             except Exception as e:
@@ -354,7 +374,7 @@ def delete_transaction(id):
     ).fetchone()
     db.execute(
         "UPDATE accounts SET balance = ? WHERE id = ?",
-        (account_balance[0] - float(transaction["amount"]), transaction['account_id']),
+        (account_balance[0] - float(transaction["amount"]), transaction["account_id"]),
     )
     db.execute("DELETE FROM transactions WHERE id = ?", (id,))
     db.commit()
@@ -371,17 +391,17 @@ def bills():
     db = get_db()
 
     name = db.execute(
-        "SELECT s.id, name_id, first_name, last_name FROM users s JOIN names n ON s.name_id = n.id WHERE s.id = ?",
+        "SELECT first_name, last_name FROM users u JOIN names n ON u.name_id = n.id WHERE u.id = ?",
         (g.user["id"],),
     ).fetchone()
 
-    bills = db.execute(
-        "SELECT * FROM bills WHERE user_id = ?",
+    accounts = db.execute(
+        "SELECT a.id, account_name, balance FROM accounts a JOIN users u ON a.user_id = u.id WHERE u.id = ?",
         (g.user["id"],),
     ).fetchall()
 
-    accounts = db.execute(
-        "SELECT a.id, account_name, account_type, balance FROM accounts a JOIN users u ON a.user_id = u.id WHERE u.id = ?",
+    bills = db.execute(
+        "SELECT * FROM bills b JOIN accounts a ON b.account_id = a.id WHERE a.user_id = ?",
         (g.user["id"],),
     ).fetchall()
 
@@ -396,30 +416,14 @@ def bills():
 @bp.route("/add_bill", methods=("POST",))
 @login_required
 def add_bill():
-    user_id = g.user["id"]
     account_id = request.form["account_id"]
     category_name = request.form["category_name"]
     bill_name = request.form["bill_name"]
     amount = request.form["amount"]
     due_date = request.form["due_date"]
-    is_recurring = request.form["is_recurring"]
-    frequency = request.form["frequency"]
     is_paid = request.form["is_paid"]
     db = get_db()
     error = None
-
-    category = db.execute(
-        "SELECT COUNT(*) FROM categories WHERE category_name = ?", (category_name,)
-    ).fetchone()
-
-    if category[0] == 0:
-        db.execute(
-            "INSERT INTO categories (category_name) VALUES (?)",
-            (category_name,),
-        )
-        category_id = db.execute("SELECT last_insert_rowid()").fetchone()[0]
-    else:
-        category_id = db.execute("SELECT id from categories WHERE category_name = ?", (category_name,)).fetchone()
 
     if not account_id:
         error = "Account is required"
@@ -432,33 +436,32 @@ def add_bill():
 
     if error is None:
         try:
-            if is_paid == 1:
-                db.execute(
-                    "INSERT INTO transactions (account_id, amount, transaction_type, category, description) VALUES (?, ?, ?, ?, ?)",
-                    (
-                        account_id,
-                        -1 * amount,
-                        "Bill Payment",
-                        category_name,
-                        f"Payment of bill: {bill_name}",
-                    ),
-                )
+            # Insert the category if it doesn't already exist
+            db.execute(
+                "INSERT OR IGNORE INTO categories (category_name) VALUES (?)",
+                (category_name,),
+            )
+            # Fetch the category ID (whether newly inserted or already existing)
+            category_id = db.execute(
+                "SELECT id FROM categories WHERE category_name = ?",
+                (category_name,),
+            ).fetchone()[0]
+
+            if is_paid == "1":
                 payment_date = date.today().strftime("%Y-%m-%d")
             else:
                 payment_date = None
+
             transaction_id = db.execute("SELECT last_insert_rowid()").fetchone()[0]
             db.execute(
-                "INSERT INTO bills (user_id, account_id, category_id, transaction_id, bill_name, amount, due_date, is_recurring, frequency, is_paid, payment_date) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                "INSERT INTO bills (account_id, category_id, transaction_id, bill_name, amount, due_date, is_paid, payment_date) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
                 (
-                    user_id,
                     account_id,
                     category_id,
                     transaction_id,
                     bill_name,
                     amount,
                     due_date,
-                    is_recurring,
-                    frequency,
                     is_paid,
                     payment_date,
                 ),
@@ -477,7 +480,7 @@ def get_bill(id):
     bill = (
         get_db()
         .execute(
-            "SELECT * FROM bills WHERE id = ?",
+            "SELECT b.id, account_id, category_name, transaction_id, bill_name, amount, due_date, is_paid, payment_date FROM bills b JOIN categories c ON b.category_id = c.id WHERE b.id = ?",
             (id,),
         )
         .fetchone()
@@ -497,21 +500,17 @@ def update_bill(id):
 
     # Fetch user details and accounts
     name = db.execute(
-        "SELECT s.id, name_id, first_name, last_name "
-        "FROM users s JOIN names n ON s.name_id = n.id "
-        "WHERE s.id = ?",
+        "SELECT first_name, last_name FROM users u JOIN names n ON u.name_id = n.id WHERE u.id = ?",
         (g.user["id"],),
     ).fetchone()
 
     bills = db.execute(
-        "SELECT * FROM bills WHERE user_id = ?",
+        "SELECT * FROM bills b JOIN accounts a ON b.account_id = a.id WHERE a.user_id = ?",
         (g.user["id"],),
     ).fetchall()
 
     accounts = db.execute(
-        "SELECT a.id, account_name, account_type, balance "
-        "FROM accounts a JOIN users u ON a.user_id = u.id "
-        "WHERE u.id = ?",
+        "SELECT a.id, account_name, balance FROM accounts a JOIN users u ON a.user_id = u.id WHERE u.id = ?",
         (g.user["id"],),
     ).fetchall()
 
@@ -521,23 +520,8 @@ def update_bill(id):
         bill_name = request.form["bill_name"]
         amount = request.form["amount"]
         due_date = request.form["due_date"]
-        is_recurring = request.form["is_recurring"]
-        frequency = request.form["frequency"]
         is_paid = request.form["is_paid"]
         error = None
-
-        category = db.execute(
-            "SELECT COUNT(*) FROM categories WHERE category_name = ?", (category_name,)
-        ).fetchone()
-
-        if category[0] == 0:
-            db.execute(
-                "INSERT INTO categories (category_name) VALUES (?)",
-                (category_name,),
-            )
-            category_id = db.execute("SELECT last_insert_rowid()").fetchone()[0]
-        else:
-            category_id = db.execute("SELECT id from categories WHERE category_name = ?", (category_name,)).fetchone()
 
         # Validate inputs
         if not account_id:
@@ -555,16 +539,20 @@ def update_bill(id):
             try:
                 db.execute("BEGIN TRANSACTION")  # Start transaction
 
-                # Restore balance for the original account
-                original_balance = db.execute(
-                    "SELECT balance FROM accounts WHERE id = ?",
-                    (bill["account_id"],),
-                ).fetchone()
-                if original_balance and bill["is_paid"] == 1:
-                    db.execute(
-                        "DELETE FROM transactions WHERE id = ?",
-                        (bill["transaction_id"],),
-                    )
+                db.execute(
+                    "INSERT OR IGNORE INTO categories (category_name) VALUES (?)",
+                    (category_name,),
+                )
+                # Fetch the category ID (whether newly inserted or already existing)
+                category_id = db.execute(
+                    "SELECT id FROM categories WHERE category_name = ?",
+                    (category_name,),
+                ).fetchone()[0]
+
+                if is_paid == "1":
+                    payment_date = date.today().strftime("%Y-%m-%d")
+                else:
+                    payment_date = None
 
                 # Update the new account balance
                 new_account_balance = db.execute(
@@ -583,16 +571,28 @@ def update_bill(id):
                         ),
                     )
                     payment_date = date.today().strftime("%Y-%m-%d")
-                    transaction_id = db.execute("SELECT last_insert_rowid()").fetchone()[0]
+                    transaction_id = db.execute(
+                        "SELECT last_insert_rowid()"
+                    ).fetchone()[0]
                 elif is_paid == 0:
                     payment_date = None
                     transaction_id = None
 
                 # Update the transaction details
                 db.execute(
-                    "UPDATE bills SET user_id = ?, account_id = ?, category_id = ?, transaction_id = ?, bill_name = ?, amount = ?, due_date = ?, is_recurring = ?, frequency = ?, is_paid = ?, payment_date = ?"
+                    "UPDATE bills SET account_id = ?, category_id = ?, transaction_id = ?, bill_name = ?, amount = ?, due_date = ?, is_paid = ?, payment_date = ?"
                     " WHERE id = ?",
-                    (g.user['id'], account_id, category_id, transaction_id, bill_name, amount, due_date, is_recurring, frequency, is_paid, payment_date, id),
+                    (
+                        account_id,
+                        category_id,
+                        transaction_id,
+                        bill_name,
+                        amount,
+                        due_date,
+                        is_paid,
+                        payment_date,
+                        id,
+                    ),
                 )
                 db.commit()  # Commit changes
             except Exception as e:
