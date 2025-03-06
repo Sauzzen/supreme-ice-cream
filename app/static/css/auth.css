@@ -45,8 +45,8 @@ a {
 
 button {
   border-radius: 20px;
-  border: 1px solid #ff4b2b;
-  background-color: #ff4b2b;
+  border: 1px solid #1c233b;
+  background-color: #1c233b;
   color: #ffffff;
   font-size: 12px;
   font-weight: bold;
@@ -159,8 +159,8 @@ input[type="checkbox"] {
 
 .overlay {
   background: #ff416c;
-  background: -webkit-linear-gradient(to right, #ff4b2b, #ff416c);
-  background: linear-gradient(to right, #ff4b2b, #ff416c);
+  background: -webkit-linear-gradient(to right, #1c233b, #1c243d);
+  background: linear-gradient(to right, #222c4d, #1a223d);
   background-repeat: no-repeat;
   background-size: cover;
   background-position: 0 0;

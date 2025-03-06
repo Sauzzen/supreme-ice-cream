@@ -449,6 +449,7 @@ def add_transaction():
         error = "Transaction Type is required"
     elif not category_name:
         error = "Category is required"
+    
     try:
         amount = float(amount)  # Ensure amount is numeric
     except ValueError:
@@ -457,41 +458,46 @@ def add_transaction():
     if error is None:
         try:
             db.execute("BEGIN TRANSACTION")
+
             # Insert the category if it doesn't already exist
             db.execute(
                 "INSERT OR IGNORE INTO categories (category_name) VALUES (?)",
                 (category_name,),
             )
+
             # Fetch the category ID (whether newly inserted or already existing)
             category_id = db.execute(
                 "SELECT id FROM categories WHERE category_name = ?",
                 (category_name,),
             ).fetchone()[0]
+
+            # Insert the transaction
             db.execute(
                 "INSERT INTO transactions (account_id, amount, transaction_type, category_id) VALUES (?, ?, ?, ?)",
                 (account_id, amount, transaction_type, category_id),
             )
+
+            # Update account balance
             account_balance = db.execute(
                 "SELECT balance FROM accounts WHERE id = ?",
                 (account_id,),
             ).fetchone()
+
+            new_balance = account_balance[0] + float(amount)
             db.execute(
                 "UPDATE accounts SET balance = ? WHERE id = ?",
-                (
-                    account_balance[0] + float(amount),
-                    account_id,
-                ),
+                (new_balance, account_id),
             )
-            db.commit()
-            db.rollback()
+
+            db.commit()  # ✅ Commit the transaction
+            flash("Transaction successfully added!", "success")  # ✅ Success message
         except db.IntegrityError:
-            error = f"Error"
-        else:
-            return redirect(url_for("dashboard.transactions"))
+            db.rollback()  # ✅ Rollback only if an error occurs
+            error = "Error occurred while adding transaction."
+    else:
+        flash(error, "error")  # ✅ Show error message
 
-    flash(error)
     return redirect(url_for("dashboard.transactions"))
-
 
 def get_transaction(id):
     transaction = (

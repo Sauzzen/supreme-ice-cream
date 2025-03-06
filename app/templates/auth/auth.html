@@ -62,5 +62,22 @@
     </div>
 </div>
 
-<script src="{{ url_for('static', filename='js/auth.js') }}"></script>
+<script src="{{ url_for('static', filename='js/auth.js') }}">
+        document.querySelector("form[action='/auth/register']").addEventListener("submit", function (event) {
+        let fullName = document.querySelector("input[name='first_name']").value.trim();
+        let email = document.querySelector("input[name='email']").value.trim();
+        let password = document.querySelector("input[name='password']").value.trim();
+
+        if (!fullName) {
+            alert("Error! Full Name field cannot be empty.");
+            event.preventDefault();
+        } else if (!email) {
+            alert("Error! Email field cannot be empty.");
+            event.preventDefault();
+        } else if (!password) {
+            alert("Error! Password field cannot be empty.");
+            event.preventDefault();
+        }
+    });
+</script>
 {% endblock %}

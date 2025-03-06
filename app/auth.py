@@ -1,5 +1,4 @@
 import functools
-
 from flask import (
     Blueprint,
     flash,
@@ -9,13 +8,12 @@ from flask import (
     request,
     session,
     url_for,
+    make_response
 )
 from werkzeug.security import check_password_hash, generate_password_hash
-
 from app.db import get_db
 
 bp = Blueprint("auth", __name__, url_prefix="/auth")
-
 
 @bp.before_app_request
 def load_logged_in_user():
@@ -28,17 +26,15 @@ def load_logged_in_user():
             get_db().execute("SELECT * FROM users WHERE id = ?", (user_id,)).fetchone()
         )
 
-
+# Ensure only logged-in users can access protected routes
 def login_required(view):
     @functools.wraps(view)
     def wrapped_view(**kwargs):
         if g.user is None:
-            return redirect(url_for("auth.login"))
-
+            return redirect(url_for("auth.login"))  # Redirect to login if not authenticated
         return view(**kwargs)
 
-    return wrapped_view
-
+    return wrapped_view  # Removed incorrect header modification
 
 @bp.route("/register", methods=("GET", "POST"))
 def register():
@@ -55,19 +51,23 @@ def register():
         error = None
 
         if not username:
-            error = "Username is required."
+            error = "Error! Username field cannot be empty."
         elif not first_name:
-            error = "First Name is required"
+            error = "Error! Full Name field cannot be empty."
         elif no_middle_name == False and not middle_name:
-            error = "Middle Name is required"
+            error = "Error! Middle Name field cannot be empty."
         elif no_middle_name and middle_name:
-            error = "I thought you have no middle name?"
+            error = "Error! I thought you have no middle name?"
         elif not last_name:
-            error = "Last Name is required"
-        elif not password or not confirm_password:
-            error = "Password and Confirmation are required."
+            error = "Error! Last Name field cannot be empty."
+        elif not email:
+            error = "Error! Email field cannot be empty."
+        elif not password:
+            error = "Error! Password field cannot be empty."
+        elif not confirm_password:
+            error = "Error! Confirm Password field cannot be empty."
         elif password != confirm_password:
-            error = "Passwords doesn't match."
+            error = "Error! Passwords don't match."
 
         if error is None:
             try:
@@ -91,7 +91,6 @@ def register():
                     (user_id, "Debit", "Debit", 0)
                 )
                 db.commit()
-                db.rollback()
             except db.IntegrityError:
                 error = f"User {username} is already registered."
             else:
@@ -101,7 +100,6 @@ def register():
 
     rap = "right-panel-active"
     return render_template("auth/auth.html", rap=rap, signup=True)
-
 
 @bp.route("/login", methods=("GET", "POST"))
 def login():
@@ -128,8 +126,11 @@ def login():
 
     return render_template("auth/auth.html", rap=None, login=True)
 
-
 @bp.route("/logout")
 def logout():
     session.clear()
-    return redirect(url_for("index"))
+    response = make_response(redirect(url_for("index")))  # Create response object
+    response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
+    response.headers["Pragma"] = "no-cache"
+    response.headers["Expires"] = "0"
+    return response  # Return response with cache control headers

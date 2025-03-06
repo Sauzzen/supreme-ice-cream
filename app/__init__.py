@@ -1,7 +1,5 @@
 import os
-
-from flask import Flask
-
+from flask import Flask, make_response
 
 def create_app(test_config=None):
     # create and configure the app
@@ -10,7 +8,7 @@ def create_app(test_config=None):
         SECRET_KEY="dev",
         DATABASE=os.path.join(app.instance_path, "database.sqlite"),
     )
-
+    
     if test_config is None:
         # load the instance config, if it exists, when not testing
         app.config.from_pyfile("config.py", silent=True)
@@ -24,21 +22,26 @@ def create_app(test_config=None):
     except OSError:
         pass
 
-    # a simple page that says hello
+    # Prevent back button access after logout by disabling caching
+    @app.after_request
+    def add_cache_control_headers(response):
+        response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0, post-check=0, pre-check=0"
+        response.headers["Pragma"] = "no-cache"
+        response.headers["Expires"] = "-1"
+        return response
+
+    # A simple page that says hello
     @app.route("/hello")
     def hello():
         return "Hello, World!"
 
     from . import db
-
     db.init_app(app)
 
     from . import auth
-
     app.register_blueprint(auth.bp)
 
     from . import dashboard
-
     app.register_blueprint(dashboard.bp)
     app.add_url_rule("/", endpoint="index")
 
